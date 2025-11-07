@@ -1,7 +1,7 @@
 # Sensor Fusion System
 
 A comprehensive ROS2 Jazzy package for multi-sensor data fusion, monitoring, and analysis.
-
+Mohammed Al-Taharwah
 ## 📋 Table of Contents
 - [Overview](#overview)
 - [Features](#features)
