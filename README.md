@@ -1,294 +1,439 @@
-# Ros2-week-3
 # Sensor Fusion System
 
-## Overview
-A comprehensive ROS2 Jazzy package for multi-sensor data fusion, monitoring, and analysis. This system simulates and processes data from IMU, GPS, Temperature, and Barometer sensors with real-time anomaly detection and data logging capabilities.
+A comprehensive ROS2 Jazzy package for multi-sensor data fusion, monitoring, and analysis.
 
-## Features
-- **Multi-Sensor Publishing**: Realistic sensor data simulation with configurable noise
-- **Data Fusion**: Kalman filtering and sensor fusion algorithms
-- **Anomaly Detection**: Real-time monitoring and alert system
-- **Data Logging**: Comprehensive logging with statistical analysis
-- **Visualization**: Real-time plotting of sensor data
-- **Configurable Parameters**: ROS2 parameter-based configuration
-- **Quality of Service**: Appropriate QoS profiles for different data types
+## 📋 Table of Contents
+- [Overview](#overview)
+- [Features](#features)
+- [System Architecture](#system-architecture)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Package Structure](#package-structure)
+- [Usage](#usage)
+- [Nodes Description](#nodes-description)
+- [Topics](#topics)
+- [Parameters](#parameters)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
 
-## System Architecture
+## 🎯 Overview
+
+This package implements a complete sensor fusion system that simulates, processes, and analyzes data from multiple sensors including IMU, GPS, Temperature, and Barometer sensors. The system includes real-time monitoring, anomaly detection, data logging, and statistical analysis.
+
+## ✨ Features
+
+- **Multi-Sensor Simulation**: Realistic sensor data with configurable noise
+- **Real-time Data Fusion**: Combines multiple sensor inputs for state estimation
+- **Anomaly Detection**: Automated alert system for out-of-range values
+- **Data Logging**: Comprehensive logging with timestamps and statistics
+- **Data Visualization**: Real-time plotting capabilities
+- **Configurable QoS**: Appropriate Quality of Service profiles for different sensors
+- **Parameter Server**: Dynamic configuration through ROS2 parameters
+- **Launch Files**: Easy deployment of all nodes
+- **Unit Tests**: Comprehensive test coverage
+
+## 🏗️ System Architecture
 
 ```
-┌─────────────────────┐
-│ Sensor Publisher    │
-│ - IMU (10 Hz)       │
-│ - GPS (1 Hz)        │
-│ - Temperature (2 Hz)│
-│ - Barometer (2 Hz)  │
-└──────────┬──────────┘
-           │
-           ├──────────────────┬───────────────┬──────────────┐
-           │                  │               │              │
-           ▼                  ▼               ▼              ▼
-    ┌─────────────┐   ┌─────────────┐  ┌──────────┐  ┌──────────┐
-    │ Data Logger │   │ Alert System│  │  Fusion  │  │Visualizer│
-    └─────────────┘   └─────────────┘  └──────────┘  └──────────┘
+┌─────────────────┐
+│ Sensor Publisher│
+│   (10/2/1 Hz)   │
+└────────┬────────┘
+         │
+         ├─── /imu/data (10Hz)
+         ├─── /gps/fix (1Hz)
+         ├─── /temperature/data (2Hz)
+         └─── /barometer/data (2Hz)
+                │
+    ┌───────────┼───────────┐
+    │           │           │
+┌───▼────┐ ┌───▼────┐ ┌───▼──────┐
+│  Data  │ │ Alert  │ │  Fusion  │
+│ Logger │ │ System │ │   Node   │
+└────────┘ └───┬────┘ └────┬─────┘
+               │            │
+          /alerts      /fused_data
 ```
 
-## Package Structure
-
-```
-sensor_fusion_system/
-├── sensor_fusion_system/
-│   ├── __init__.py
-│   ├── sensor_publisher.py
-│   ├── data_logger.py
-│   ├── alert_system.py
-│   ├── sensor_fusion.py
-│   └── visualizer.py
-├── launch/
-│   ├── sensor_fusion_launch.py
-│   └── all_nodes_launch.py
-├── config/
-│   └── sensor_params.yaml
-├── test/
-│   ├── test_sensor_publisher.py
-│   ├── test_data_logger.py
-│   └── test_alert_system.py
-├── package.xml
-├── setup.py
-├── setup.cfg
-└── README.md
-```
-
-## Prerequisites
+## 📦 Prerequisites
 
 ### System Requirements
-- Ubuntu 22.04 (or WSL with Ubuntu 22.04)
-- ROS2 Jazzy
+- Ubuntu 22.04 (Jammy Jellyfish) or later
+- ROS2 Jazzy Jalisco
 - Python 3.10+
+- WSL2 (if on Windows)
 
-### Dependencies
+### WSL Setup (for Windows Users)
+
+If you're using WSL, ensure you have:
+
 ```bash
-sudo apt install ros-jazzy-desktop
-sudo apt install python3-colcon-common-extensions
-pip3 install numpy matplotlib
+# Update WSL to WSL2
+wsl --set-default-version 2
+
+# Update Ubuntu packages
+sudo apt update && sudo apt upgrade -y
+
+# Install required dependencies
+sudo apt install -y python3-pip python3-dev python3-matplotlib
 ```
 
-## Installation
+## 🚀 Installation
 
-### 1. Create Workspace
+### 1. Install ROS2 Jazzy (if not already installed)
+
 ```bash
+# Set locale
+sudo apt update && sudo apt install locales
+sudo locale-gen en_US en_US.UTF-8
+sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
+export LANG=en_US.UTF-8
+
+# Add ROS2 apt repository
+sudo apt install software-properties-common
+sudo add-apt-repository universe
+sudo apt update && sudo apt install curl -y
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+# Install ROS2 Jazzy
+sudo apt update
+sudo apt install -y ros-jazzy-desktop
+
+# Install development tools
+sudo apt install -y python3-colcon-common-extensions python3-rosdep
+```
+
+### 2. Create Workspace and Clone Package
+
+```bash
+# Create workspace
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
-```
 
-### 2. Clone/Create Package
-```bash
-# If from repository
-git clone <repository_url> sensor_fusion_system
-
-# Or create manually
+# Create the package
 ros2 pkg create sensor_fusion_system --build-type ament_python --dependencies rclpy sensor_msgs geometry_msgs std_msgs
+
+# Navigate to package
+cd sensor_fusion_system
 ```
 
-### 3. Build Package
+### 3. Install Python Dependencies
+
+```bash
+# Install required Python packages
+pip3 install numpy matplotlib scipy
+```
+
+### 4. Initialize rosdep (first time only)
+
+```bash
+sudo rosdep init
+rosdep update
+```
+
+### 5. Install Package Dependencies
+
+```bash
+cd ~/ros2_ws
+rosdep install --from-paths src --ignore-src -r -y
+```
+
+### 6. Build the Package
+
 ```bash
 cd ~/ros2_ws
 colcon build --packages-select sensor_fusion_system
 source install/setup.bash
 ```
 
-## Usage
+## 📁 Package Structure
 
-### Launch All Nodes
-```bash
-ros2 launch sensor_fusion_system all_nodes_launch.py
+```
+sensor_fusion_system/
+├── sensor_fusion_system/
+│   ├── __init__.py
+│   ├── sensor_publisher.py      # Simulates all sensors
+│   ├── data_logger.py           # Logs and analyzes data
+│   ├── alert_system.py          # Monitors and alerts
+│   ├── sensor_fusion.py         # Fuses sensor data
+│   └── utils/
+│       ├── __init__.py
+│       ├── filters.py           # Signal filtering utilities
+│       └── visualizer.py        # Data visualization
+├── launch/
+│   ├── sensor_fusion.launch.py # Launch all nodes
+│   └── visualization.launch.py  # Launch with visualization
+├── config/
+│   └── sensor_params.yaml       # Configuration parameters
+├── test/
+│   ├── test_sensor_publisher.py
+│   ├── test_data_logger.py
+│   ├── test_alert_system.py
+│   └── test_sensor_fusion.py
+├── package.xml
+├── setup.py
+├── setup.cfg
+└── README.md
 ```
 
-### Launch Individual Nodes
+## 🎮 Usage
 
-#### Sensor Publisher
+### Running Individual Nodes
+
 ```bash
+# Terminal 1: Sensor Publisher
 ros2 run sensor_fusion_system sensor_publisher
-```
 
-#### Data Logger
-```bash
+# Terminal 2: Data Logger
 ros2 run sensor_fusion_system data_logger
-```
 
-#### Alert System
-```bash
+# Terminal 3: Alert System
 ros2 run sensor_fusion_system alert_system
-```
 
-#### Sensor Fusion
-```bash
+# Terminal 4: Fusion Node
 ros2 run sensor_fusion_system sensor_fusion
 ```
 
-#### Visualizer
+### Using Launch File (Recommended)
+
 ```bash
-ros2 run sensor_fusion_system visualizer
+# Launch all nodes
+ros2 launch sensor_fusion_system sensor_fusion.launch.py
+
+# Launch with visualization
+ros2 launch sensor_fusion_system visualization.launch.py
 ```
 
-## Topics
+### Viewing Topics
 
-| Topic | Type | Frequency | Description |
-|-------|------|-----------|-------------|
-| `/sensors/imu` | sensor_msgs/Imu | 10 Hz | IMU data (acceleration, gyroscope) |
-| `/sensors/gps` | sensor_msgs/NavSatFix | 1 Hz | GPS coordinates |
-| `/sensors/temperature` | sensor_msgs/Temperature | 2 Hz | Temperature readings |
-| `/sensors/barometer` | sensor_msgs/FluidPressure | 2 Hz | Barometric pressure |
-| `/sensors/fused` | geometry_msgs/PoseStamped | 10 Hz | Fused sensor output |
-| `/alerts` | std_msgs/String | Event-based | Anomaly alerts |
+```bash
+# List all topics
+ros2 topic list
 
-## Parameters
+# Echo specific topic
+ros2 topic echo /imu/data
+ros2 topic echo /gps/fix
+ros2 topic echo /alerts
+ros2 topic echo /fused_data
+
+# Check topic frequency
+ros2 topic hz /imu/data
+```
+
+### Parameter Configuration
+
+```bash
+# List parameters
+ros2 param list /sensor_publisher
+
+# Get parameter value
+ros2 param get /sensor_publisher imu_noise_level
+
+# Set parameter value
+ros2 param set /sensor_publisher imu_noise_level 0.05
+```
+
+## 🔧 Nodes Description
+
+### 1. Sensor Publisher Node
+
+**File**: `sensor_publisher.py`
+
+Simulates multiple sensors with realistic noise models.
+
+**Published Topics**:
+- `/imu/data` (sensor_msgs/Imu) - 10 Hz
+- `/gps/fix` (sensor_msgs/NavSatFix) - 1 Hz
+- `/temperature/data` (sensor_msgs/Temperature) - 2 Hz
+- `/barometer/data` (sensor_msgs/FluidPressure) - 2 Hz
+
+**Parameters**:
+- `imu_noise_level` (double, default: 0.01)
+- `gps_noise_level` (double, default: 0.0001)
+- `temp_noise_level` (double, default: 0.5)
+- `pressure_noise_level` (double, default: 100.0)
+
+### 2. Data Logger Node
+
+**File**: `data_logger.py`
+
+Subscribes to all sensor topics and logs data with statistical analysis.
+
+**Subscribed Topics**:
+- `/imu/data`
+- `/gps/fix`
+- `/temperature/data`
+- `/barometer/data`
+
+**Features**:
+- Timestamps all data
+- Calculates min, max, average
+- Prints summary every 5 seconds
+- Exports logs to CSV files
+
+### 3. Alert System Node
+
+**File**: `alert_system.py`
+
+Monitors sensors for anomalies and publishes alerts.
+
+**Subscribed Topics**:
+- All sensor topics
+
+**Published Topics**:
+- `/alerts` (std_msgs/String)
+
+**Alert Conditions**:
+- IMU acceleration > 20 m/s²
+- GPS coordinates out of valid range
+- Temperature < -40°C or > 85°C
+- Pressure < 30000 or > 120000 Pa
+
+### 4. Sensor Fusion Node
+
+**File**: `sensor_fusion.py`
+
+Combines multiple sensor inputs for improved state estimation.
+
+**Subscribed Topics**:
+- `/imu/data`
+- `/gps/fix`
+- `/barometer/data`
+- `/temperature/data`
+
+**Published Topics**:
+- `/fused_data` (geometry_msgs/PoseStamped)
+
+**Features**:
+- Kalman filter implementation
+- Altitude calculation from barometer
+- Temperature-compensated pressure readings
+- Moving average filter
+
+## 📊 Topics
+
+| Topic | Message Type | Rate | QoS | Description |
+|-------|-------------|------|-----|-------------|
+| `/imu/data` | sensor_msgs/Imu | 10 Hz | BEST_EFFORT | Inertial measurement data |
+| `/gps/fix` | sensor_msgs/NavSatFix | 1 Hz | RELIABLE | GPS position fix |
+| `/temperature/data` | sensor_msgs/Temperature | 2 Hz | RELIABLE | Temperature readings |
+| `/barometer/data` | sensor_msgs/FluidPressure | 2 Hz | RELIABLE | Pressure/altitude data |
+| `/alerts` | std_msgs/String | event | RELIABLE | System alerts |
+| `/fused_data` | geometry_msgs/PoseStamped | 10 Hz | RELIABLE | Fused sensor output |
+
+## ⚙️ Parameters
 
 ### Sensor Publisher Parameters
+
 ```yaml
 sensor_publisher:
-  imu_noise: 0.01          # IMU noise standard deviation
-  gps_noise: 0.0001        # GPS noise standard deviation
-  temp_noise: 0.5          # Temperature noise (°C)
-  baro_noise: 10.0         # Barometer noise (Pa)
+  ros__parameters:
+    # Noise levels
+    imu_noise_level: 0.01
+    gps_noise_level: 0.0001
+    temp_noise_level: 0.5
+    pressure_noise_level: 100.0
+    
+    # Initial positions
+    initial_latitude: 31.9522
+    initial_longitude: 35.9450
+    initial_altitude: 800.0
 ```
 
-### Alert System Parameters
+### Data Logger Parameters
+
 ```yaml
-alert_system:
-  temp_min: -40.0          # Minimum temperature (°C)
-  temp_max: 85.0           # Maximum temperature (°C)
-  altitude_max: 10000.0    # Maximum altitude (m)
-  imu_accel_max: 50.0      # Maximum acceleration (m/s²)
+data_logger:
+  ros__parameters:
+    log_directory: "~/sensor_logs"
+    summary_interval: 5.0
+    export_format: "csv"
 ```
 
-## Configuration
-
-Edit `config/sensor_params.yaml` to customize sensor parameters:
+## 🧪 Running Tests
 
 ```bash
-ros2 run sensor_fusion_system sensor_publisher --ros-args --params-file config/sensor_params.yaml
-```
-
-## Data Logging
-
-Logs are saved to `~/.ros/sensor_logs/` with timestamps. Each log includes:
-- Raw sensor readings
-- Statistical analysis (min, max, average)
-- Timestamps
-- Alert history
-
-## Quality of Service (QoS)
-
-The package implements appropriate QoS profiles:
-
-- **Sensor Data**: `BEST_EFFORT` reliability for high-frequency IMU data
-- **GPS Data**: `RELIABLE` for critical position information
-- **Alerts**: `RELIABLE` + `TRANSIENT_LOCAL` for critical notifications
-- **Logs**: `RELIABLE` for data integrity
-
-## Visualization
-
-The visualizer node provides real-time plotting:
-- IMU acceleration (X, Y, Z axes)
-- Temperature trends
-- Altitude from barometer
-- GPS position (2D plot)
-
-Press `Ctrl+C` to close visualization windows.
-
-## Testing
-
-### Run Unit Tests
-```bash
+# Run all tests
 cd ~/ros2_ws
 colcon test --packages-select sensor_fusion_system
+
+# View test results
 colcon test-result --verbose
 ```
 
-### Manual Testing
+## 🐛 Troubleshooting
+
+### Issue: "Package not found"
+
 ```bash
-# Terminal 1: Launch all nodes
-ros2 launch sensor_fusion_system all_nodes_launch.py
-
-# Terminal 2: Monitor topics
-ros2 topic list
-ros2 topic echo /sensors/imu
-ros2 topic hz /sensors/imu
-
-# Terminal 3: Check for alerts
-ros2 topic echo /alerts
-```
-
-## Troubleshooting
-
-### Issue: Nodes not starting
-```bash
-# Check if ROS2 is sourced
-source /opt/ros/jazzy/setup.bash
+# Re-source the workspace
 source ~/ros2_ws/install/setup.bash
 
-# Verify package is built
-ros2 pkg list | grep sensor_fusion
+# Add to ~/.bashrc for automatic sourcing
+echo "source ~/ros2_ws/install/setup.bash" >> ~/.bashrc
 ```
 
-### Issue: No data on topics
+### Issue: "Permission denied" on WSL
+
 ```bash
-# Check if publisher is running
+# Fix permissions
+sudo chmod +x ~/ros2_ws/src/sensor_fusion_system/sensor_fusion_system/*.py
+```
+
+### Issue: Matplotlib not displaying on WSL
+
+```bash
+# Install X server for WSL
+# Download and install VcXsrv or X410 on Windows
+# Then in WSL:
+export DISPLAY=:0
+```
+
+### Issue: Topics not showing
+
+```bash
+# Check if nodes are running
 ros2 node list
 
-# Verify topic connections
-ros2 topic info /sensors/imu
+# Check node info
+ros2 node info /sensor_publisher
+
+# Verify topic list
+ros2 topic list -v
 ```
 
-### Issue: Import errors
-```bash
-# Install missing dependencies
-pip3 install numpy matplotlib
-sudo apt install ros-jazzy-sensor-msgs ros-jazzy-geometry-msgs
-```
+## 📈 Performance Tips
 
-## Performance Optimization
+- Use appropriate QoS profiles (BEST_EFFORT for high-frequency data)
+- Monitor CPU usage: `top` or `htop`
+- Check network latency: `ros2 topic delay /imu/data`
+- Profile nodes: `ros2 run sensor_fusion_system sensor_publisher --ros-args --log-level debug`
 
-- **CPU Usage**: ~5-10% on modern systems
-- **Memory**: ~50-100 MB per node
-- **Network**: Minimal bandwidth (~1 Mbps for all topics)
+## 🤝 Contributing
 
-## Future Enhancements
-
-- [ ] Add Lidar sensor simulation
-- [ ] Implement Extended Kalman Filter (EKF)
-- [ ] Add machine learning-based anomaly detection
-- [ ] Create web-based visualization dashboard
-- [ ] Implement sensor calibration routines
-- [ ] Add bag file recording and playback
-
-## Contributing
+Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
 5. Open a Pull Request
 
-## License
+## 📝 License
 
-This project is licensed under the Apache 2.0 License - see the LICENSE file for details.
+This project is licensed under the Apache 2.0 License.
 
-## References
+## 👤 Author
+
+Developed for ROS2 Jazzy Jalisco
+
+## 📚 Additional Resources
 
 - [ROS2 Documentation](https://docs.ros.org/en/jazzy/)
-- [sensor_msgs Package](https://github.com/ros2/common_interfaces/tree/jazzy/sensor_msgs)
-- [ROS2 QoS Documentation](https://docs.ros.org/en/jazzy/Concepts/About-Quality-of-Service-Settings.html)
-
-## Contact
-
-For issues and questions, please open an issue on the GitHub repository.
-
-## Acknowledgments
-
-- ROS2 community for excellent documentation
-- Contributors and testers
+- [ROS2 Tutorials](https://docs.ros.org/en/jazzy/Tutorials.html)
+- [sensor_msgs Documentation](https://github.com/ros2/common_interfaces/tree/jazzy/sensor_msgs)
 
 ---
 
-**Built with ❤️ using ROS
+**Note**: This package is designed for educational and testing purposes. For production use, additional safety measures and validation should be implemented.
